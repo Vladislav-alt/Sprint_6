@@ -1,41 +1,30 @@
-from selenium.webdriver.support import expected_conditions as EC
+from .base_page import BasePage
+from .locators.main_page_locators import MainPageLocators
+from .locators.base_locators import BaseLocators
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By  # Добавьте этот импорт
-from .locators import MainPageLocators
+from selenium.webdriver.support import expected_conditions as EC
+import allure
+import time
 
 
-class MainPage:
-    def __init__(self, driver):
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 15)
+class MainPage(BasePage):
 
-    def accept_cookies(self):
-        try:
-            cookie_btn = self.wait.until(
-                EC.element_to_be_clickable(MainPageLocators.COOKIE_BUTTON)
-            )
-            cookie_btn.click()
-        except:
-            pass
+    @allure.step("Нажать на верхнюю кнопку заказа")
+    def click_top_order_button(self):
+        order_button = self.wait_for_clickable(MainPageLocators.TOP_ORDER_BUTTON)
+        self.click_element(order_button)
+        return self
 
-    def click_order_button(self, button_type="top"):
-        if button_type == "top":
-            locator = MainPageLocators.ORDER_BUTTON_TOP
-        else:
-            locator = MainPageLocators.ORDER_BUTTON_BOTTOM
+    @allure.step("Нажать на нижнюю кнопку заказа")
+    def click_bottom_order_button(self):
+        order_button = self.wait_for_clickable(MainPageLocators.BOTTOM_ORDER_BUTTON)
+        self.click_element(order_button)
+        return self
 
-            self.driver.execute_script(
-                "window.scrollTo(0, document.body.scrollHeight);"
-            )
-
-        element = self.wait.until(EC.element_to_be_clickable(locator))
-
-        self.driver.execute_script("arguments[0].click();", element)
-
+    @allure.step("Получить ответ на вопрос FAQ")
     def get_question_answer(self, question_index):
-        questions = self.wait.until(
-            EC.visibility_of_all_elements_located(MainPageLocators.QUESTION_LOCATOR)
-        )
+        questions = self.find_elements(MainPageLocators.QUESTION_LOCATOR)
 
         if question_index >= len(questions):
             raise IndexError(f"Question index {question_index} out of range")
@@ -45,34 +34,32 @@ class MainPage:
         self.driver.execute_script("arguments[0].scrollIntoView(true);", question)
         self.driver.execute_script("arguments[0].click();", question)
 
-        answer_locator = (
-            By.XPATH,
-            f"//div[@id='accordion__panel-{question_index}' and not(@hidden)]",
+        answer_locator = MainPageLocators.FAQ_ANSWER(question_index)
+        answer_element = WebDriverWait(self.driver, 10).until(
+            EC.visibility_of_element_located(answer_locator)
         )
-        self.wait.until(EC.visibility_of_element_located(answer_locator))
 
-        answer = self.driver.find_element(By.ID, f"accordion__panel-{question_index}")
-        return answer.text if answer else None
+        time.sleep(1)
 
-    def click_scooter_logo(self):
-        element = self.wait.until(
-            EC.element_to_be_clickable(MainPageLocators.SCOOTER_LOGO)
-        )
-        self.driver.execute_script("arguments[0].click();", element)
+        return answer_element.text
 
+    @allure.step("Нажать на логотип Яндекса")
     def click_yandex_logo(self):
-        current_window = self.driver.current_window_handle
-        element = self.wait.until(
-            EC.element_to_be_clickable(MainPageLocators.YANDEX_LOGO)
-        )
-        self.driver.execute_script("arguments[0].click();", element)
+        yandex_logo = self.wait_for_clickable(BaseLocators.YANDEX_LOGO)
+        yandex_logo.click()
 
-        self.wait.until(EC.number_of_windows_to_be(2))
+        window_handles = self.driver.window_handles
 
-        for window in self.driver.window_handles:
-            if window != current_window:
-                self.driver.switch_to.window(window)
-                break
+        if len(window_handles) > 1:
+            self.driver.switch_to.window(window_handles[1])
 
-        self.wait.until(EC.url_contains("dzen.ru"))
+            WebDriverWait(self.driver, 10).until(
+                lambda driver: driver.current_url != "about:blank"
+            )
+
         return self.driver.current_url
+
+    @allure.step("Принять куки")
+    def accept_cookies(self):
+
+        return super().accept_cookies()

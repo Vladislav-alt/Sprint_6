@@ -31,10 +31,10 @@ class TestOrderFlow:
         button_type = data["button_type"]
 
         with allure.step("Нажимаем кнопку заказа"):
-            if data["button_type"] == "top":
-                main_page.click_order_button("top")
-            else:
-                main_page.click_order_button("bottom")
+         if data["button_type"] == "top":
+          main_page.click_top_order_button()  
+         else:
+          main_page.click_bottom_order_button()  
 
         with allure.step("Выполняем полный сценарий заказа"):
             success_text = order_page.user_rent_order(customer, rental)
