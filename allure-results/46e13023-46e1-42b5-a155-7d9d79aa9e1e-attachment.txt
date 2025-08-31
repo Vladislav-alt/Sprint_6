@@ -1,0 +1,2 @@
+Кнопка активна: True
+Классы кнопки: Button_Button__ra12g Button_Middle__1CSJM
